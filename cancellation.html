@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cancellation Page</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Cancel Tickets</h1>
+        <p>Select the tickets you want to cancel and click "Cancel Selected Tickets".</p>
+        
+        <table id="ticket-list">
+            <thead>
+                <tr>
+                    <th>Ticket ID</th>
+                    <th>Train ID</th>
+                    <th>From Station</th>
+                    <th>To Station</th>
+                    <th>Departure Time</th>
+                    <th>Select</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Ticket rows will be dynamically populated -->
+            </tbody>
+        </table>
+        
+        <button id="cancel-button">Cancel Selected Tickets</button>
+    </div>
+
+    <script>
+        // Fetch and display tickets
+        async function fetchTickets() {
+            try {
+                const response = await fetch('/tickets');
+                const data = await response.json();
+
+                if (data.success) {
+                    const tbody = document.querySelector('#ticket-list tbody');
+                    tbody.innerHTML = ''; // Clear table rows
+                    
+                    data.tickets.forEach(ticket => {
+                        const row = `
+                            <tr>
+                                <td>${ticket.ticket_id}</td>
+                                <td>${ticket.train_id}</td>
+                                <td>${ticket.fromStation}</td>
+                                <td>${ticket.toStation}</td>
+                                <td>${ticket.departureTime}</td>
+                                <td><input type="checkbox" value="${ticket.ticket_id}" class="ticket-checkbox"></td>
+                            </tr>
+                        `;
+                        tbody.innerHTML += row;
+                    });
+                } else {
+                    alert('Failed to fetch tickets.');
+                }
+            } catch (error) {
+                console.error('Error fetching tickets:', error);
+            }
+        }
+
+        // Cancel selected tickets
+        async function cancelTickets() {
+            const selectedTickets = Array.from(document.querySelectorAll('.ticket-checkbox:checked'))
+                .map(checkbox => checkbox.value);
+
+            if (selectedTickets.length === 0) {
+                alert('Please select at least one ticket to cancel.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/cancel-tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ticket_ids: selectedTickets })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Selected tickets canceled successfully!');
+                    fetchTickets(); // Refresh the ticket list
+                } else {
+                    alert('Failed to cancel tickets.');
+                }
+            } catch (error) {
+                console.error('Error canceling tickets:', error);
+            }
+        }
+
+        document.getElementById('cancel-button').addEventListener('click', cancelTickets);
+
+        // Fetch tickets on page load
+        fetchTickets();
+    </script>
+</body>
+</html>

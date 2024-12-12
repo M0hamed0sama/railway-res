@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reservation</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Reservation</h1>
+
+        <!-- Filtering Section -->
+        <div class="filters">
+            <label for="fromStation">From:</label>
+            <select id="fromStation">
+                <option value="">-- Select --</option>
+            </select>
+
+            <label for="toStation">To:</label>
+            <select id="toStation">
+                <option value="">-- Select --</option>
+            </select>
+
+            <button id="filter-btn">Filter</button>
+        </div>
+
+        <!-- Reservation Table -->
+        <table id="reservation-table">
+            <thead>
+                <tr>
+                    <th>Select</th>
+                    <th>Train ID</th>
+                    <th>From Station</th>
+                    <th>To Station</th>
+                    <th>Departure Time</th>
+                </tr>
+            </thead>
+            <tbody id="reservation-list">
+                <!-- Data will be inserted here dynamically -->
+            </tbody>
+        </table>
+
+        <button id="reserve-btn">Reserve</button>
+    </div>
+
+    <script>
+        // Fetch station list for filters
+        fetch('/stations')
+            .then(response => response.json())
+            .then(data => {
+                const fromStationSelect = document.getElementById("fromStation");
+                const toStationSelect = document.getElementById("toStation");
+
+                data.stations.forEach(station => {
+                    const fromOption = document.createElement("option");
+                    fromOption.value = station;
+                    fromOption.textContent = station;
+                    fromStationSelect.appendChild(fromOption);
+
+                    const toOption = document.createElement("option");
+                    toOption.value = station;
+                    toOption.textContent = station;
+                    toStationSelect.appendChild(toOption);
+                });
+            });
+
+        // Fetch reservations and populate the table
+        function fetchReservations(filters = {}) {
+            const query = new URLSearchParams(filters).toString();
+            const url = `/reservations?${query}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const reservationList = document.getElementById("reservation-list");
+                    reservationList.innerHTML = ""; // Clear the list
+
+                    if (data.success && data.reservations.length > 0) {
+                        data.reservations.forEach(reservation => {
+                            const row = document.createElement("tr");
+
+                            row.innerHTML = `
+                                <td><input type="checkbox" class="reservation-checkbox" data-train-id="${reservation.train_id}" data-from="${reservation.fromStation}" data-to="${reservation.toStation}" data-departure="${reservation.departureTime}"></td>
+                                <td>${reservation.train_id}</td>
+                                <td>${reservation.fromStation}</td>
+                                <td>${reservation.toStation}</td>
+                                <td>${reservation.departureTime}</td>
+                            `;
+
+                            reservationList.appendChild(row);
+                        });
+                    } else {
+                        const noResultsRow = document.createElement("tr");
+                        noResultsRow.innerHTML = `<td colspan="5">No reservations found.</td>`;
+                        reservationList.appendChild(noResultsRow);
+                    }
+                });
+        }
+
+        // Initial fetch of reservations
+        fetchReservations();
+
+        // Filter button click event
+        document.getElementById("filter-btn").addEventListener("click", function () {
+            const fromStation = document.getElementById("fromStation").value;
+            const toStation = document.getElementById("toStation").value;
+
+            const filters = {};
+            if (fromStation) filters.fromStation = fromStation;
+            if (toStation) filters.toStation = toStation;
+
+            fetchReservations(filters);
+        });
+
+        // Reserve button click event
+   
+
+
+        document.getElementById("reserve-btn").addEventListener("click", function () {
+
+           
+
+            const selectedReservations = [];
+            const checkboxes = document.querySelectorAll('.reservation-checkbox:checked');
+
+            checkboxes.forEach(checkbox => {
+                const reservation = {
+                    train_id: checkbox.dataset.trainId,
+                    fromStation: checkbox.dataset.from,
+                    toStation: checkbox.dataset.to,
+                    departureTime: checkbox.dataset.departure,
+                    user_id: 1// Example user ID; replace with dynamic user ID if available
+                };
+
+                selectedReservations.push(reservation);
+            });
+
+            if (selectedReservations.length > 0) {
+                // Send selected reservations to the server
+                fetch('/create-tickets', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ tickets: selectedReservations })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("Tickets reserved successfully!");
+                        window.location.href = '/tickets.html'; // Redirect to Tickets page
+                    } else {
+                        alert("Error reserving tickets.");
+                    }
+                });
+            } else {
+                alert("Please select at least one reservation.");
+            }
+        });
+    </script>
+</body>
+</html>
